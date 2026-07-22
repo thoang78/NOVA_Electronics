@@ -1,0 +1,14 @@
+# Stable USB device names for the robot's two serial links.
+# Install with:
+#   sudo cp 99-robot-usb.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+#
+# Find the real vendor/product IDs for your boards with:
+#   udevadm info -a -n /dev/ttyACM0 | grep -E 'idVendor|idProduct'
+# (plug in one device at a time to tell them apart)
+
+# Raspberry Pi Pico 2 (running micro-ROS firmware, appears as CDC-ACM)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="ttyPICO", MODE="0666"
+
+# ROBOTIS U2D2 (FTDI-based)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", SYMLINK+="ttyU2D2", MODE="0666"
