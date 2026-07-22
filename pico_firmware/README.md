@@ -8,7 +8,7 @@
   range -1.0 to 1.0, same wheel order as above
 - Subscribes `std_msgs/msg/Float32MultiArray` on `fan_cmd` — 2 values, 0.0-1.0 duty cycle
 
-## BEFORE YOU BUILD: fill in your real GPIO numbers
+**BEFORE YOU BUILD: fill in your real GPIO numbers**
 
 Pin numbers on your diagram (Pin16, Pin17, ...) are **physical/board pin numbers**, not
 GPIO numbers. Look up the Pico 2 pinout diagram and convert each one, then edit the
