@@ -50,8 +50,29 @@ Hold BOOTSEL, plug the Pico 2 into your laptop/dev machine, then:
 ```bash
 cp pico_firmware.uf2 /media/$USER/RP2350/
 ```
+Or drag-and-drop in a file manager — it mounts as a USB drive in bootloader mode
 
-(or drag-and-drop in a file manager — it mounts as a USB drive in bootloader mode)
+Once the uf2 is imported into the Pico's bootloader, the USB drive should unmount itself automatically but the Pico itself should still be recognized as a usb device. To check use the command in powershell: 
+
+            uspid list
+
+and make sure that the Pico's serial connection is attached, using this:
+
+            usbipd attach --wsl --busid 2-5
+
+You will also need bind the device, so that the pico will be shared with the WSL work environment. This is done by:
+
+            usbipd bind --busid 2-5
+
+Note: An powershell with administrive privileges will be needed for binding.
+
+For when the micro_ros_agent is running, a good check to do is make sure that the serial connection between the Pico and WSL is recognized, which in this case is /dev/ttyACM0. 
+This check can be done by running the following in WSL:
+      
+         ls -l /dev/ttyACM*
+
+What should return is:
+         /dev/ttyACM0
 
 ## Test standalone (before plugging into the Jetson)
 
@@ -60,6 +81,7 @@ On a laptop with ROS 2 + micro-ROS agent installed:
 ```bash
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0 -b 115200
 ```
+
 
 Then in another terminal: `ros2 topic list` should show `/imu/data` and
 `/wheel_encoders`. `ros2 topic echo /wheel_encoders` should change when you spin a
