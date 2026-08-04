@@ -16,9 +16,8 @@ from std_msgs.msg import Float64MultiArray
 from dynamixel_sdk import PortHandler, PacketHandler, COMM_SUCCESS
 
 # ---------------------------------------------------------------------
-# EDIT THESE to match your actual servo IDs (set during Dynamixel setup,
-# e.g. with the Dynamixel Wizard 2.0 tool) and model's control table.
-# Values below assume an X-series servo (e.g. XL430) -- check your model.
+# Edit with actual servo IDs (using Dynamixel Wizard 2.0 tool during setup) 
+# and model's control table (assuming X-series servo e.g. XL430 right now)
 # ---------------------------------------------------------------------
 DEVICE_NAME = '/dev/ttyU2D2'   # set by udev rule, see config/99-robot-usb.rules
 BAUDRATE = 57600

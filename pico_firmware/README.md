@@ -21,18 +21,17 @@ compile but won't drive the right pins until you do this.
 mkdir pico_firmware #If the directory is not created yet
 cd pico_firmware
 
-#Make sure Pico SDK's library is installed onto your WSL/Linux environment. If not, use the following command:
+#Install tools needed to build PICO SDK and micro-ros firmware
 sudo apt install cmake g++ gcc-arm-none-eabi doxygen libnewlib-arm-none-eabi git python3
 
 
-git clone -b jazzy https://github.com/micro-ROS/micro_ros_raspberrypi_pico_sdk.git libmicroros_src
-
-# Follow that repo's instructions to build libmicroros for the Pico 2 (rp2350) target
-# and drop the resulting libmicroros/ folder (with .a + include/) next to this README.
+#Clone Raspberry Pi Pico SDK repo
 git clone https://github.com/raspberrypi/pico-sdk.git
 export PICO_SDK_PATH=$(pwd)/pico-sdk
 cd pico-sdk && git submodule update --init && cd ..
-```
+
+#Clone the following repo for RP2350 speciifc micro-ros firmware 
+git clone https://github.com/samyarsadat/Micro-ROS-RP2350.git
 
 ## Build
 
