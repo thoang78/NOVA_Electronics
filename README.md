@@ -1,7 +1,7 @@
 # Robot Software Stack 
 
 ```
-Jetson Orin Nano  --USB(serial)-->  Pico 2  --> Cytron x2 (4 drive motors + 4 encoders), IMU, fans
+Jetson Orin Nano  --USB(serial)-->  Pico 2  --> Cytron x2 (4 drive motors + 4 encoders), IMU
 Jetson Orin Nano  --USB-C(U2D2)-->  4x Dynamixel servos (daisy chained) — one steering servo per wheel
 ```
 
