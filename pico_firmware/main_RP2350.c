@@ -50,6 +50,21 @@
 #include <ctime>
 #include <hardware/watchdog.h>
 
+//Motor + Encoder
+#include "hardware/pwm.h"
+#include "hardware/gpio.h"
+#include "pico/cyw43_arch.h"
+
+#define WHEEL_COUNT 4
+enum { FL = 0, FR = 1, BL = 2, BR = 3 };
+
+static const int PIN_PWM[WHEEL_COUNT]   = { 16, -1, -1, -1 };
+static const int PIN_DIR[WHEEL_COUNT]   = { 17, -1, -1, -1 };
+static const int PIN_ENC_A[WHEEL_COUNT] = { 3,  -1, -1, -1 };
+static const int PIN_ENC_B[WHEEL_COUNT] = { 4,  -1, -1, -1 };
+
+
+//IMU
 #if ENABLE_BNO055
 #include "hardware/i2c.h"
 
@@ -144,18 +159,7 @@ void set_motor_duty(int wheel_index, float duty) {
     LOG_DEBUG("Motor %d duty -> %.2f", wheel_index, duty);
 }
 
-void wheel_cmd_callback(const void *msgin) {
-    const std_msgs__msg__Float32MultiArray *msg = (const std_msgs__msg__Float32MultiArray *)msgin;
 
-    if (msg->data.size != 4) {
-        LOG_DEBUG("wheel_cmd: expected 4 values, got %zu", msg->data.size);
-        return;
-    }
-
-    for (int i = 0; i < 4; i++) {
-        set_motor_duty(i, msg->data.data[i]);
-    }
-}
 
 #if ENABLE_BNO055
 void init_i2c() {
@@ -215,6 +219,66 @@ bool bno055_read_quaternion(float *w, float *x, float *y, float *z) {
     return true;
 }
 #endif  // ENABLE_BNO055
+
+static volatile int32_t encoder_counts[WHEEL_COUNT] = {0};
+
+static void motor_init(void) {
+    for (int i = 0; i < WHEEL_COUNT; i++) {
+        if (PIN_PWM[i] < 0) continue; //Skip unassignments
+        gpio_set_function(PIN_PWM[i], GPIO_FUNC_PWM);
+        uint slice = pwm_gpio_to_slice_num(PIN_PWM[i]);
+        pwm_set_wrap(slice, 1000); // Set PWM frequency (1 kHz)
+        pwm_set_enabled(slice, true); 
+        gpio_init(PIN_DIR[i]);
+        gpio_set_dir(PIN_DIR[i], true); // Set direction pin as output
+    }
+}
+
+static void motor_set(int wheel, float duty) {
+    if (PIN_PWM[wheel] < 0) return; //Skip unassignments
+    if (duty > 1.0f) duty = 1.0f;
+    if (duty < -1.0f) duty = -1.0f;
+    gpio_put(PIN_DIR[wheel], duty < 0);
+    uint slice = pwm_gpio_to_slice_num(PIN_PWM[wheel]);
+    uint chan = pwm_gpio_to_channel(PIN_PWM[wheel]);
+    pwm_set_chan_level(slice, chan, (uint16_t)(fabsf(duty) * 1000));
+}
+
+static void encoder_irq_handler(uint gpio, uint32_t events) {
+    // Handles Encoder Interrup
+    for (int i = 0; i < WHEEL_COUNT; i++) {
+        if (gpio == (uint)PIN_ENC_A[i]) {
+            bool a = gpio_get(PIN_ENC_A[i]);
+            bool b = gpio_get(PIN_ENC_B[i]);
+            encoder_counts[i] += (a == b) ? 1 : -1;
+            return;
+        }
+    }
+}
+
+static void encoders_init(void) {
+    for (int i = 0; i < WHEEL_COUNT; i++) {
+        if (PIN_ENC_A[i] < 0) continue; //Skip unassignments
+        gpio_init(PIN_ENC_A[i]);
+        gpio_set_dir(PIN_ENC_A[i], GPIO_IN);
+        gpio_pull_up(PIN_ENC_A[i]);
+        gpio_init(PIN_ENC_B[i]);
+        gpio_set_dir(PIN_ENC_B[i], GPIO_IN);
+        gpio_pull_up(PIN_ENC_B[i]);
+        gpio_set_irq_enabled_with_callback(
+            PIN_ENC_A[i], GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, 
+            true, &encoder_irq_handler);
+    }
+}
+
+void wheel_cmd_callback(const void *msgin) {
+    const std_msgs__msg__Float32MultiArray *msg = (const std_msgs__msg__Float32MultiArray *)msgin;
+
+    if (msg->data.size < WHEEL_COUNT) return;  // Not enough data
+    for (int i = 0; i < WHEEL_COUNT; i++) {
+        motor_set(i, msg->data.data[i]);
+    }
+}
 
 bool init_microros() {
     LOG_DEBUG("Initializing MicroROS...");
@@ -299,11 +363,9 @@ void task_core0(void *params) {
     LOG_DEBUG("Core %d task starting (motors/encoders)...", get_core_num());
 
     while (true) {
-        // TODO: replace with real encoder reads
-        msg_encoders.data.data[0] = 0;  // front_left
-        msg_encoders.data.data[1] = 0;  // front_right
-        msg_encoders.data.data[2] = 0;  // back_left
-        msg_encoders.data.data[3] = 0;  // back_right
+        for (int i = 0; i < WHEEL_COUNT; i++) {
+            msg_encoders.data.data[i] = encoder_counts[i];
+        }
 
         rcl_ret_t pub_ret = rcl_publish(&publisher_encoders, &msg_encoders, NULL);
         if (pub_ret != RCL_RET_OK) {
@@ -456,6 +518,11 @@ int main()
         stdio_filter_driver(&stdio_usb);
     #endif
 
+    if (cyw43_arch_init()) {
+        LOG_DEBUG("Failed to initialize CYW43 Wi-Fi chip!");
+        while (true) { tight_loop_contents(); }
+    }
+
     LOG_DEBUG("STDIO initialized.");
 
     srand(to_us_since_boot(get_absolute_time()));
@@ -487,6 +554,8 @@ int main()
         LOG_DEBUG("Failed to create MicroROS state task!");
     } else {
         LOG_DEBUG("Starting FreeRTOS scheduler...");
+        motor_init();
+        encoders_init();
         vTaskStartScheduler();
     }
 
