@@ -17,6 +17,7 @@ compile but won't drive the right pins until you do this.
 
 ## Get the dependencies
 
+
 ```bash
 mkdir pico_firmware #If the directory is not created yet
 cd pico_firmware
@@ -32,6 +33,29 @@ cd pico-sdk && git submodule update --init && cd ..
 
 #Clone the following repo for RP2350 speciifc micro-ros firmware 
 git clone https://github.com/samyarsadat/Micro-ROS-RP2350.git
+
+#Note: Since this repo uses a docker in its workflow, you will need to install a docker and integrated it into WSL. For Ubuntu 24.04 you can use the following in your WSL.
+sudo apt update
+sudo apt install docker.io
+sudo usermod -aG docker $USER
+#Close and reopen WSL terminal
+sudo service docker start
+docker --version
+
+#Troubleshooting Point:
+# If the docker's container fails to rebuild continuously (Repo's README calls for second attempt at container rebuild as first fail is expected.) then edit this file:
+
+~/pico_firmware/Micro-ROS-RP2350/pico_fw_ws/.devcontainer/devcontainer.json 
+
+#Edit by omitting the following lines in above file, under the runArgs array:
+"--gpus", "all",
+"-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+"--env=DISPLAY",
+
+
+
+bash ~/pico_ws/libmicroros/build_uros.sh -b
+
 
 ## Build
 
