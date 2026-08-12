@@ -32,7 +32,7 @@ export PICO_SDK_PATH=$(pwd)/pico-sdk
 cd pico-sdk && git submodule update --init && cd ..
 
 #Clone the following repo for RP2350 speciifc micro-ros firmware 
-git clone https://github.com/samyarsadat/Micro-ROS-RP2350.git
+git clone --recurse-submodules https://github.com/samyarsadat/Micro-ROS-RP2350.git
 
 #Note: Since this repo uses a docker in its workflow, you will need to install a docker and integrated it into WSL. For Ubuntu 24.04 you can use the following in your WSL.
 sudo apt update
@@ -42,8 +42,20 @@ sudo usermod -aG docker $USER
 sudo service docker start
 docker --version
 
+
+
+#Open up the docker through powershell using the following commands:
+cd ~/pico_firmware/Micro-ROS-RP2350/pico_fw_ws
+code .
+
+#This will open the docker container in VScode, where you will automatically get a pop-up to Rebuild the Open Container, press Rebuild.
+
+#Note: If this does not pop-up make sure to you have the Dev Container extension installed on VScode.
+
 #Troubleshooting Point:
 # If the docker's container fails to rebuild continuously (Repo's README calls for second attempt at container rebuild as first fail is expected.) then edit this file:
+
+
 
 ~/pico_firmware/Micro-ROS-RP2350/pico_fw_ws/.devcontainer/devcontainer.json 
 
@@ -53,16 +65,19 @@ docker --version
 "--env=DISPLAY",
 
 
+## Build the micro-ROS library 
+bash ~/pico_ws/libmicroros/build_uros.sh -f
 
-bash ~/pico_ws/libmicroros/build_uros.sh -b
 
+ls -la ~/pico_ws/libmicroros/firmware/build/include
+find ~/pico_ws/libmicroros/firmware/build -iname "libmicroros.a"
 
 ## Build
 
 ```bash
-mkdir build && cd build
-cmake -DPICO_BOARD=pico2 ..
-make -j4
+cd ~/pico_ws/build
+cmake ..
+make -j$(nproc)
 ```
 
 This produces `pico_firmware.uf2`.
